@@ -23,14 +23,15 @@ EndFunc
 
 ; brief: infinite loop of "level up main-DPS-char & ten clicks for the monsters"
 Func captureV()
+   $MousePos = MouseGetPos() ; save initial positin to fix even accidentally movements
+
    While (True)
 	  ; one click on "level"
 	  MouseClick("left")
 
 	  ; .. and ten on the battle-ground for killing
 	  ; move: 250 px on my screen!
-	  $MousePos = MouseGetPos()
-	  MouseMove($MousePos[0], $MousePos[1] - 250)
+	  MouseMove($MousePos[0], $MousePos[1] - 250, 2)
 
 	  ; click for kills
 	  For $i = 0 To 10 Step 1
@@ -39,7 +40,7 @@ Func captureV()
 	  Next
 
 	  ; move back to original position
-	  MouseMove($MousePos[0], $MousePos[1])
+	  MouseMove($MousePos[0], $MousePos[1], 2)
    WEnd
 EndFunc
 
