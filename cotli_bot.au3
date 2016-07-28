@@ -4,8 +4,8 @@
 ;				* try to collect the items as fast as possible
 ;				* every certain multiple of runs (configureable) level all other crusaders and upgrade their skills
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20160724
-; version: 0.04
+; date: 20160728
+; version: 0.04.1
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -18,12 +18,13 @@
 ; 3. press Shift+v .. enjoy
 ; ********************************
 
-; some values
-Global Const $moveSpeed = 5 ; 0 instant; 10 default, 2 is for real runs
+; edit mabye the first two values - but not the following three
+Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
+Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger for "later" run-starts; called UF in comments
+
 Global Const $yOffset = 300 ; offset based on the starting position
 Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
-Global Const $diffUpgrade = [50, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
-Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger ..
+Global Const $diffUpgrade = [48, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
 
 ; assign the hotkeys
 HotKeySet("+v", "main") ; change to a different hotkey if you need to
@@ -44,7 +45,7 @@ Func collectItems(ByRef Const $mousePosOri)
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset, $moveSpeed) ; to the left
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then down
    MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then right
-   ; moving upwards was removed, because not necessary
+   ; moving upward was removed, because not necessary
 EndFunc
 
 ; move towards and click the "level all crusaders"-button
@@ -62,17 +63,17 @@ EndFunc
 ; brief: infinite loop of "level up main-DPS-char & ten clicks for the monsters"
 Func main()
    Local Const $mousePosOri = MouseGetPos() ; save initial position to fix even accidental movements
-   Local $counter = 0 ; increased and reset every "2 * UF"
+   Local $counter = 0 ; increased and reset every UF
 
    While (True)
 	  ; one click on "level current crusader"
 	  MouseClick("left")
 
-	  ; move towards the game-area
-	  MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset, $moveSpeed)
-
 	  ; ten clicks on the battle-ground for killing
 	  For $i = 0 To 10 Step 1
+		 ; move towards the game-area: do this everytime to prevent accidental movements and chaos!
+		 MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset, $moveSpeed)
+		 ;add the click
 		 MouseClick("left")
 		 Sleep(1000 / 10) ; 10 (per second) as "killing-helper"; increase if system is fast enough (10 max)
 	  Next
@@ -81,17 +82,17 @@ Func main()
 	  collectItems($mousePosOri)
 
 	  ; for every 0th run level all other crusaders (will take some computation time ..)
-	  IF($counter = (0 * $updateFrequency)) Then
+	  IF($counter = (0 * $updateFrequency + 0)) Then ;trigger at 0
 		 levelAll($mousePosOri)
 	  EndIf
 
 	  ; for every 100th run level all other crusaders (will take some computation time ..)
-	  IF($counter = (1 * $updateFrequency)) Then
+	  IF($counter = (0 * $updateFrequency + 10)) Then ; trigger at 10
 		 upgradeAll($mousePosOri)
 	  EndIf
 
-	  ; increase the counter: reset if 200
-	  $counter = Mod(($counter + 1), 2 * $updateFrequency) ; increase first, then modulo the double UF
+	  ; increase the counter: reset if UF is hit (currently: 100)
+	  $counter = Mod(($counter + 1), 1 * $updateFrequency) ; increase first, then modulo to reset
 
 	  ; move back to original position for the next run
 	  MouseMove($mousePosOri[0], $mousePosOri[1], $moveSpeed)
