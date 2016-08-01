@@ -6,9 +6,9 @@
 ;				* trigger every once in a while the abilities: order is Magnify, Stormrider, Savage Strikes,
 ;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks just progress)
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20160729
-; version: 0.05
-; license:  GNU GENERAL PUBLIC LICENSE Version 2
+; date: 20160801
+; version: 0.5.1
+; license:  GNU GENERAL PUBLIC LICENSE Versiogn 2
 
 ; ********************************
 ; HOW TO USE:
@@ -17,15 +17,17 @@
 ; 2. position the mouse over level-up-button of your main DPS-dealer:
 ;		* best position is hovering the gold-coin-icon!
 ;		* main char has to be positioned on the top-right! Otherwise: fix all coordinates!
-; 3. press Shift+v .. enjoy
+; 3. press Shift+y for starting the bot .. enjoy
+; 4. pause/unpause the script-run with Shift+x
+; 5. quit script with F5 (just like starting)
 ; ********************************
 
 ;includes
 #include <Date.au3>
 
 ; edit mabye the first values - but not the following ones
-;Global Const $magnifyCooldown = 11 * 60 + 15 ; with current set-up
-Global Const $savageCooldown = 15 * 60 + 0 + 10 ; +10 for security; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
+Global Const $timeTriggerDelay = 10;
+Global Const $savageCooldown = 15 * 60 + $timeTriggerDelay ; +10 for security; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
 Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
 Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger for "later" run-starts; called UF in comments
 
@@ -33,23 +35,34 @@ Global Const $logFunctionCall = True ;False True; determines if the entry of a f
 Global Const $yOffset = 300 ; offset based on the starting position
 Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
 Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
+Global Const $sleepingTime = 200;
 
 ; assign the hotkeys
-HotKeySet("+v", "main") ; change to a different hotkey if you need to
-HotKeySet("{F5}", "quit") ; same hotkey like for executing the script
+HotKeySet("+y", "main") ; go go go
+HotKeySet("+x", "togglePause") ; freeze!
+HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
 ; helpers
-Global $lastTrigger = 0 ; for the triggerAbilities()
+Global $lastTrigger = 0 ; for the triggerAbilities(); todo check if this can be moved inside the function
+Global $isPaused = False ; helper for the pause-functionality
 
 ; body: scripts sleeps before triggering the real functionality
  While 1
-   Sleep(200)
+   Sleep($sleepingTime)
 WEnd
 
 ; brief: interupts and exits script
-Func quit()
-   logCall("quit()")
+Func quitScript()
+   logCall("quitScript()")
    Exit
+EndFunc
+
+; brief: put the script to sleep if the global var is set ..
+Func togglePause()
+   $isPaused = Not $isPaused ; toggle
+   While $isPaused
+	  Sleep($sleepingTime)
+   WEnd
 EndFunc
 
 ; brief: write current string to StdErr if globally enabled
@@ -60,25 +73,25 @@ Func logCall(ByRef Const $string)
    EndIf
 EndFunc
 
-; brief: move the mouse in some counter-clock-wise rectangle-shape
+; brief: move the mouse in some counter-clock-wise hook-shape
 Func collectItems(ByRef Const $mousePosOri)
    ;logCall("collectItems()")
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset, $moveSpeed) ; to the left
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then down
    MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then right
-   ; moving upward is not necessary
+   ; moving upward is not necessary: will be done in the whole cycle
 EndFunc
 
 ; brief: move towards and click the "level all crusaders"-button
 Func levelAll(ByRef Const $mousePosOri)
-   logCall("levelAll()")
+   ;logCall("levelAll()")
    MouseMove($mousePosOri[0] + $diffUpgrade[0], $mousePosOri[1] + $diffUpgrade[1], $moveSpeed)
    MouseClick("left")
 EndFunc
 
 ; brief: move towards and click the "upgrade all crusaders"-button
 Func upgradeAll(ByRef Const $mousePosOri)
-   logCall("upgradeAll()")
+   ;logCall("upgradeAll()")
    MouseMove($mousePosOri[0] + $diffUpgrade[0], $mousePosOri[1], $moveSpeed)
    MouseClick("left")
 EndFunc
@@ -89,28 +102,28 @@ Func triggerAbilities(ByRef Const $mousePosOri)
    logCall("triggerAbilities()")
 
    ; y always 65
+   Local Const $yOffset = 65;
    ; Magnify 540
-   MouseMove($mousePosOri[0] - 540, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 540, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Stormrider 340
-   MouseMove($mousePosOri[0] - 340, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 340, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Savage Strikes 460
-   MouseMove($mousePosOri[0] - 460, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 460, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Gold-o-rama 420
-   MouseMove($mousePosOri[0] - 420, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 420, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Fire Storm 500
-   MouseMove($mousePosOri[0] - 500, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 500, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Click-o-Rama 580
-   MouseMove($mousePosOri[0] - 580, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 580, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
    ; Alchemy 300
-   MouseMove($mousePosOri[0] - 300, $mousePosOri[1] - 65, $moveSpeed)
+   MouseMove($mousePosOri[0] - 300, $mousePosOri[1] - $yOffset, $moveSpeed)
    MouseClick("left")
-
 EndFunc
 
 ; brief: infinite loop of "level up main-DPS-char & ten clicks for the monsters"
