@@ -1,14 +1,15 @@
 ; description: Simple bot for the game "Crusaders of the lost idols" (http://armorgames.com/crusaders-of-the-lost-idols-game):
-;				* will kill by clicking
+;				* will monsters kill by clicking
 ;				* level up the selected char (needed for progress!) and
 ;				* try to collect the items as fast as possible
 ;				* every certain multiple of runs (configureable) level all other crusaders and upgrade their skills
 ;				* trigger every once in a while the abilities: order is Magnify, Stormrider, Savage Strikes,
-;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks just progress)
+;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks progress)
+;				* pausing the script inbetween for adjustments now possible
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20160801
-; version: 0.5.1
-; license:  GNU GENERAL PUBLIC LICENSE Versiogn 2
+; date: 20160806
+; version: 0.6
+; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
 ; HOW TO USE:
@@ -25,26 +26,28 @@
 ;includes
 #include <Date.au3>
 
-; edit mabye the first values - but not the following ones
-Global Const $timeTriggerDelay = 10;
-Global Const $savageCooldown = 15 * 60 + $timeTriggerDelay ; +10 for security; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
-Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
-Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger for "later" run-starts; called UF in comments
-
-Global Const $logFunctionCall = True ;False True; determines if the entry of a function is logged to StdErr
-Global Const $yOffset = 300 ; offset based on the starting position
-Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
-Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
-Global Const $sleepingTime = 200;
-
 ; assign the hotkeys
 HotKeySet("+y", "main") ; go go go
 HotKeySet("+x", "togglePause") ; freeze!
 HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
-; helpers
-Global $lastTrigger = 0 ; for the triggerAbilities(); todo check if this can be moved inside the function
-Global $isPaused = False ; helper for the pause-functionality
+; some editable constants: change them based on your experience; most values are chosen for longtime-unwatched-runs (90% performance, but no errors ..)
+Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
+Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger for "later" run-starts; called UF in comments
+Global Const $logFunctionCall = True ;False True; determines if the entry of a function is logged to StdErr
+; position-settings
+Global Const $yOffset = 300 ; offset based on the starting position: 300 will trigger the "next area" if needed, 250 for "stay where you are"
+Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
+Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
+; time-settings
+Global Const $sleepingTime = 200;
+Global Const $timeTriggerDelay = 7 ; 10 would be "always safe"; 5 fits for fast connections; 7 is safe and sound
+Global Const $savageCooldown = 15 * 60; + $timeTriggerDelay ; +10 for security; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
+Global const $referenceTime = "2016/01/01 00:00:00" ; randomly chosen (anything past the current date works)
+
+; helper-variables
+Global $lastTriggerTime = 0 ; for the triggerAbilities(); todo check if this can be moved inside the function
+Global $stateTriggerAbilities = 0; helper for determining which task shall be done if a certain time has passed: 0 upgradeAll, 1 levelAll, 2 triggerAbilities, 3 triggerAbilities (in case due to area-change the first try missed)
 
 ; body: scripts sleeps before triggering the real functionality
  While 1
@@ -57,8 +60,9 @@ Func quitScript()
    Exit
 EndFunc
 
-; brief: put the script to sleep if the global var is set ..
+; brief: put the script to sleep if the static var is set
 Func togglePause()
+   Static Local $isPaused = False ; helper for the pause-functionality: exists only once - "static"
    $isPaused = Not $isPaused ; toggle
    While $isPaused
 	  Sleep($sleepingTime)
@@ -67,7 +71,7 @@ EndFunc
 
 ; brief: write current string to StdErr if globally enabled
 Func logCall(ByRef Const $string)
-   If($logFunctionCall) Then
+   If ($logFunctionCall) Then
 	  ;ConsoleWrite($string & " " & _NowTime(5) & @CRLF)
 	  ConsoleWrite($string & " " & _NowTime(5) & "; ")
    EndIf
@@ -84,14 +88,14 @@ EndFunc
 
 ; brief: move towards and click the "level all crusaders"-button
 Func levelAll(ByRef Const $mousePosOri)
-   ;logCall("levelAll()")
+   logCall("levelAll()")
    MouseMove($mousePosOri[0] + $diffUpgrade[0], $mousePosOri[1] + $diffUpgrade[1], $moveSpeed)
    MouseClick("left")
 EndFunc
 
 ; brief: move towards and click the "upgrade all crusaders"-button
 Func upgradeAll(ByRef Const $mousePosOri)
-   ;logCall("upgradeAll()")
+   logCall("upgradeAll()")
    MouseMove($mousePosOri[0] + $diffUpgrade[0], $mousePosOri[1], $moveSpeed)
    MouseClick("left")
 EndFunc
@@ -148,28 +152,35 @@ Func main()
 	  ; move mouse to collect items
 	  collectItems($mousePosOri)
 
-	  ; for every 0th run level all other crusaders (will take some computation time ..)
-	  If($counter = (0 * $updateFrequency + 0 + 10)) Then ;trigger at 0; +10 for simple "slow start"
+	  ; ##### new section for the time-based-triggers #####
+	  Local $currentTime = _DateDiff('s', $referenceTime, _NowCalc()) ; determine the current "time"
+
+	  If (($currentTime > ($lastTriggerTime + $savageCooldown)) And ($stateTriggerAbilities = 0)) Then
+		 ConsoleWrite(@CRLF & "state 0: levelAll($mousePosOri) " & $savageCooldown & "s" & @CRLF)
 		 levelAll($mousePosOri)
+		 $stateTriggerAbilities += 1;
+		 $lastTriggerTime = $currentTime ; reset $lastTriggerTime: next tasks are based on the difference to the first trigger AND the state (needed because else pausing/unpausing creates chaos)
 	  EndIf
 
-	  ; for every 100th run level all other crusaders (will take some computation time ..)
-	  If($counter = (0 * $updateFrequency + 10 + 10)) Then ; trigger at 10; +10 for simple "slow start"
+	  If (($currentTime > ($lastTriggerTime + 1 * $timeTriggerDelay)) And ($stateTriggerAbilities = 1)) Then
+		 ConsoleWrite(@CRLF & "state 1: upgradeAll($mousePosOri) " & 1 * $timeTriggerDelay & "s" & @CRLF)
 		 upgradeAll($mousePosOri)
+		 $stateTriggerAbilities += 1;
 	  EndIf
 
-	  ; increase the counter: reset if UF is hit (currently: 100)
-	  $counter = Mod(($counter + 1), 1 * $updateFrequency) ; increase first, then modulo to reset
-
-	  ; trigger the abilities if the time has come: do this after the time-consuming "x-All"-operations to prevent loss of usage-time
-	  Local $currentTime = _DateDiff('s', "2016/01/01 00:00:00", _NowCalc()) ; determine the current "time"
-	  ;ConsoleWrite("$currentTime: " & $currentTime & @CRLF)
-	  ;ConsoleWrite("lastTrigger: " & $lastTrigger & @CRLF)
-	  If ($currentTime > $lastTrigger + $savageCooldown) Then
-		 ConsoleWrite(@CRLF & "time-diff is bigger than $savageCooldown: " & $savageCooldown & "s" & @CRLF)
-		 $lastTrigger = _DateDiff('s', "2016/01/01 00:00:00", _NowCalc()); reset $lastTrigger
+	  If (($currentTime > ($lastTriggerTime + 2 * $timeTriggerDelay)) And ($stateTriggerAbilities = 2)) Then
+		 ConsoleWrite(@CRLF & "state 2: triggerAbilities($mousePosOri) " & 2 * $timeTriggerDelay & "s" & @CRLF)
 		 triggerAbilities($mousePosOri)
+		 $stateTriggerAbilities += 1;
 	  EndIf
+
+	  If (($currentTime > ($lastTriggerTime + 3 * $timeTriggerDelay)) And ($stateTriggerAbilities = 3)) Then
+		 ConsoleWrite(@CRLF & "state 3: triggerAbilities($mousePosOri) " & 3 * $timeTriggerDelay & "s" & @CRLF)
+		 triggerAbilities($mousePosOri)
+		 $stateTriggerAbilities = 0 ; reset
+		 $lastTriggerTime = $currentTime ; reset $lastTriggerTime
+	  EndIf
+	  ; ##### end of new section for the time-based-triggers #####
 
 	  ; move back to original position for the next run
 	  MouseMove($mousePosOri[0], $mousePosOri[1], $moveSpeed)
