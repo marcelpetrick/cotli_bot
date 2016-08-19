@@ -7,8 +7,8 @@
 ;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks progress)
 ;				* pausing the script inbetween for adjustments now possible
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20160806
-; version: 0.6
+; date: 20160819
+; version: 0.6.1
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -33,10 +33,10 @@ HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
 ; some editable constants: change them based on your experience; most values are chosen for longtime-unwatched-runs (90% performance, but no errors ..)
 Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
-Global Const $updateFrequency = 100 ; 100 recommended, maybe even bigger for "later" run-starts; called UF in comments
 Global Const $logFunctionCall = True ;False True; determines if the entry of a function is logged to StdErr
 ; position-settings
-Global Const $yOffset = 300 ; offset based on the starting position: 300 will trigger the "next area" if needed, 250 for "stay where you are"
+Global Const $yOffsetProgress = 320 ; 320/280 offset based on the starting position: the bigger will trigger the "next area" if needed,  the other: "stay where you are"
+Global Const $yOffsetSafe = 280 ; for testing with .6.1. - just progress in state3 and state4
 Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
 Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
 ; time-settings
@@ -72,14 +72,15 @@ EndFunc
 ; brief: write current string to StdErr if globally enabled
 Func logCall(ByRef Const $string)
    If ($logFunctionCall) Then
-	  ;ConsoleWrite($string & " " & _NowTime(5) & @CRLF)
-	  ConsoleWrite($string & " " & _NowTime(5) & "; ")
+	  ConsoleWrite($string & " " & _NowTime(5) & @CRLF)
+	  ;ConsoleWrite($string & " " & _NowTime(5) & "; ")
    EndIf
 EndFunc
 
 ; brief: move the mouse in some counter-clock-wise hook-shape
 Func collectItems(ByRef Const $mousePosOri)
    ;logCall("collectItems()")
+   Local Const $yOffset = ($stateTriggerAbilities >= 2) ? $yOffsetProgress : $yOffsetSafe ; regularly 280 - every 15 min for a short period 320 for progressing ...
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset, $moveSpeed) ; to the left
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then down
    MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then right
@@ -143,7 +144,7 @@ Func main()
 	  ; ten clicks on the battle-ground for killing
 	  For $i = 0 To 10 Step 1
 		 ; move towards the game-area: do this everytime to prevent accidental movements and chaos!
-		 MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset, $moveSpeed)
+		 MouseMove($mousePosOri[0], $mousePosOri[1] - (($stateTriggerAbilities >= 2) ? $yOffsetProgress : $yOffsetSafe), $moveSpeed)
 		 ;add the click
 		 MouseClick("left")
 		 Sleep(1000 / 10) ; 10 (per second) as "killing-helper"; increase if system is fast enough (10 max)
@@ -152,30 +153,30 @@ Func main()
 	  ; move mouse to collect items
 	  collectItems($mousePosOri)
 
-	  ; ##### new section for the time-based-triggers #####
+	  ; ##### new section for the time-based-triggers #####gg
 	  Local $currentTime = _DateDiff('s', $referenceTime, _NowCalc()) ; determine the current "time"
 
 	  If (($currentTime > ($lastTriggerTime + $savageCooldown)) And ($stateTriggerAbilities = 0)) Then
-		 ConsoleWrite(@CRLF & "state 0: levelAll($mousePosOri) " & $savageCooldown & "s" & @CRLF)
+		 ; ConsoleWrite(@CRLF & "state 0: levelAll($mousePosOri) " & $savageCooldown & "s" & @CRLF)
 		 levelAll($mousePosOri)
 		 $stateTriggerAbilities += 1;
 		 $lastTriggerTime = $currentTime ; reset $lastTriggerTime: next tasks are based on the difference to the first trigger AND the state (needed because else pausing/unpausing creates chaos)
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 1 * $timeTriggerDelay)) And ($stateTriggerAbilities = 1)) Then
-		 ConsoleWrite(@CRLF & "state 1: upgradeAll($mousePosOri) " & 1 * $timeTriggerDelay & "s" & @CRLF)
+		 ; ConsoleWrite(@CRLF & "state 1: upgradeAll($mousePosOri) " & 1 * $timeTriggerDelay & "s" & @CRLF)
 		 upgradeAll($mousePosOri)
 		 $stateTriggerAbilities += 1;
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 2 * $timeTriggerDelay)) And ($stateTriggerAbilities = 2)) Then
-		 ConsoleWrite(@CRLF & "state 2: triggerAbilities($mousePosOri) " & 2 * $timeTriggerDelay & "s" & @CRLF)
+		 ; ConsoleWrite(@CRLF & "state 2: triggerAbilities($mousePosOri) " & 2 * $timeTriggerDelay & "s" & @CRLF)
 		 triggerAbilities($mousePosOri)
 		 $stateTriggerAbilities += 1;
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 3 * $timeTriggerDelay)) And ($stateTriggerAbilities = 3)) Then
-		 ConsoleWrite(@CRLF & "state 3: triggerAbilities($mousePosOri) " & 3 * $timeTriggerDelay & "s" & @CRLF)
+		 ; ConsoleWrite(@CRLF & "state 3: triggerAbilities($mousePosOri) " & 3 * $timeTriggerDelay & "s" & @CRLF)
 		 triggerAbilities($mousePosOri)
 		 $stateTriggerAbilities = 0 ; reset
 		 $lastTriggerTime = $currentTime ; reset $lastTriggerTime
