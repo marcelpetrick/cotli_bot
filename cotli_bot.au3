@@ -7,8 +7,8 @@
 ;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks progress)
 ;				* pausing the script inbetween for adjustments now possible
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20160819
-; version: 0.6.1
+; date: 20161016
+; version: 0.7
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -31,13 +31,13 @@ HotKeySet("+y", "main") ; go go go
 HotKeySet("+x", "togglePause") ; freeze!
 HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
-; some editable constants: change them based on your experience; most values are chosen for longtime-unwatched-runs (90% performance, but no errors ..)
+; some editable constants: change them based on your experience; most values are chosen for longterm-unwatched-runs (90% performance, but no errors ..)
 Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
 Global Const $logFunctionCall = True ;False True; determines if the entry of a function is logged to StdErr
 ; position-settings
 Global Const $yOffsetProgress = 320 ; 320/280 offset based on the starting position: the bigger will trigger the "next area" if needed,  the other: "stay where you are"
-Global Const $yOffsetSafe = 280 ; for testing with .6.1. - just progress in state3 and state4
-Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both verticall and horizontal
+Global Const $yOffsetSafe = 320 ;280 ; for testing with .6.1. - just progress in state3 and state4
+Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both vertically and horizontally
 Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
 ; time-settings
 Global Const $sleepingTime = 200;
@@ -165,6 +165,8 @@ Func main()
 
 	  If (($currentTime > ($lastTriggerTime + 1 * $timeTriggerDelay)) And ($stateTriggerAbilities = 1)) Then
 		 ; ConsoleWrite(@CRLF & "state 1: upgradeAll($mousePosOri) " & 1 * $timeTriggerDelay & "s" & @CRLF)
+		 Send("e") ; switch to third formation
+		 ConsoleWrite(@CRLF & "sent e - before upgradeAll! " & @CRLF)
 		 upgradeAll($mousePosOri)
 		 $stateTriggerAbilities += 1;
 	  EndIf
@@ -176,6 +178,8 @@ Func main()
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 3 * $timeTriggerDelay)) And ($stateTriggerAbilities = 3)) Then
+		 Send("e") ; switch to third formation: second try if the other was blocked by area-change
+		 ConsoleWrite(@CRLF & "sent e - before triggerAbilities 2! " & @CRLF)
 		 ; ConsoleWrite(@CRLF & "state 3: triggerAbilities($mousePosOri) " & 3 * $timeTriggerDelay & "s" & @CRLF)
 		 triggerAbilities($mousePosOri)
 		 $stateTriggerAbilities = 0 ; reset
