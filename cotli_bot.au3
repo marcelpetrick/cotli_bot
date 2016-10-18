@@ -6,9 +6,12 @@
 ;				* trigger every once in a while the abilities: order is Magnify, Stormrider, Savage Strikes,
 ;					Gold-o-rama, Fire Storm, Click-o-Rama, Alchemy (no Royal command since it blocks progress)
 ;				* pausing the script inbetween for adjustments now possible
+;				* will switch automatically to your favorite (third!) formation
+;				* will make Sarah the main DPS - even if you started the script with some other crusader below the cursor (just has to be top-right!)
+;				* works with ArmorGames Version 0.81 in Chrome
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20161016
-; version: 0.7
+; date: 20161019
+; version: 0.8
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -39,6 +42,8 @@ Global Const $yOffsetProgress = 320 ; 320/280 offset based on the starting posit
 Global Const $yOffsetSafe = 320 ;280 ; for testing with .6.1. - just progress in state3 and state4
 Global Const $collectRectLength = 120 ; determines how far to move for "collecting", used both vertically and horizontally
 Global Const $diffUpgrade = [45, 100] ; determines how far to move right from "coin" to the "upgrade all"- and down to the "level all"-buttons
+Global Const $diffLeft = [-928, 52] ; offset from the "start-coin" to the "shuffle crusader-list left
+Global Const $diffRight = [41, 52] ; offset from the "start-coin" to the "shuffle crusader-list right
 ; time-settings
 Global Const $sleepingTime = 200;
 Global Const $timeTriggerDelay = 7 ; 10 would be "always safe"; 5 fits for fast connections; 7 is safe and sound
@@ -85,6 +90,27 @@ Func collectItems(ByRef Const $mousePosOri)
    MouseMove($mousePosOri[0] - $collectRectLength, $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then down
    MouseMove($mousePosOri[0], $mousePosOri[1] - $yOffset + $collectRectLength, $moveSpeed) ; then right
    ; moving upward is not necessary: will be done in the whole cycle
+EndFunc
+
+; brief: make Sarah, the main DPS, the current character for levelling. Since no position-/image-recognition exits,
+;		do this by: move to the very left by repeatedly clicking "left", then a certain number of steps right,
+;		et voila ..
+; todo: could be rewritten in a leaner way ... could ...
+Func switchToSarah(ByRef Const $mousePosOri)
+   logCall("switchToSarah()")
+
+   ; 9 to the left; multiple click via setting of MouseClick did not work - delay is needed
+   MouseMove($mousePosOri[0] + $diffLeft[0], $mousePosOri[1] + $diffLeft[1], $moveSpeed)
+   For $i = 0 To (9-1) Step 1
+	  MouseClick("left")
+	  Sleep(1000 / 10) ; 10 per second
+   Next
+   ; 4 to the right
+   MouseMove($mousePosOri[0] + $diffRight[0], $mousePosOri[1] + $diffRight[1], $moveSpeed)
+   For $i = 0 To (4-1) Step 1
+	  MouseClick("left")
+	  Sleep(1000 / 10) ; 10 per second
+   Next
 EndFunc
 
 ; brief: move towards and click the "level all crusaders"-button
@@ -153,7 +179,7 @@ Func main()
 	  ; move mouse to collect items
 	  collectItems($mousePosOri)
 
-	  ; ##### new section for the time-based-triggers #####gg
+	  ; ##### new section for the time-based-triggers #####
 	  Local $currentTime = _DateDiff('s', $referenceTime, _NowCalc()) ; determine the current "time"
 
 	  If (($currentTime > ($lastTriggerTime + $savageCooldown)) And ($stateTriggerAbilities = 0)) Then
@@ -166,21 +192,21 @@ Func main()
 	  If (($currentTime > ($lastTriggerTime + 1 * $timeTriggerDelay)) And ($stateTriggerAbilities = 1)) Then
 		 ; ConsoleWrite(@CRLF & "state 1: upgradeAll($mousePosOri) " & 1 * $timeTriggerDelay & "s" & @CRLF)
 		 Send("e") ; switch to third formation
-		 ConsoleWrite(@CRLF & "sent e - before upgradeAll! " & @CRLF)
 		 upgradeAll($mousePosOri)
 		 $stateTriggerAbilities += 1;
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 2 * $timeTriggerDelay)) And ($stateTriggerAbilities = 2)) Then
 		 ; ConsoleWrite(@CRLF & "state 2: triggerAbilities($mousePosOri) " & 2 * $timeTriggerDelay & "s" & @CRLF)
+		 switchToSarah($mousePosOri) ; make her the main DPS
 		 triggerAbilities($mousePosOri)
 		 $stateTriggerAbilities += 1;
 	  EndIf
 
 	  If (($currentTime > ($lastTriggerTime + 3 * $timeTriggerDelay)) And ($stateTriggerAbilities = 3)) Then
-		 Send("e") ; switch to third formation: second try if the other was blocked by area-change
-		 ConsoleWrite(@CRLF & "sent e - before triggerAbilities 2! " & @CRLF)
 		 ; ConsoleWrite(@CRLF & "state 3: triggerAbilities($mousePosOri) " & 3 * $timeTriggerDelay & "s" & @CRLF)
+		 Send("e") ; switch to third formation: second try if the other was blocked by area-change
+		 switchToSarah($mousePosOri) ; make her the main DPS - second try!
 		 triggerAbilities($mousePosOri)
 		 $stateTriggerAbilities = 0 ; reset
 		 $lastTriggerTime = $currentTime ; reset $lastTriggerTime
