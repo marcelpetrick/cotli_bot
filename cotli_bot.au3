@@ -8,10 +8,10 @@
 ;				* pausing the script inbetween for adjustments now possible
 ;				* will switch automatically to your favorite (third!) formation
 ;				* will make Sarah the main DPS - even if you started the script with some other crusader below the cursor (just has to be top-right!)
-;				* works with ArmorGames Version 0.81 in Chrome
+;				* works with ArmorGames Version 0.88 in Chrome
 ; author: Marcel Petrick (mail@marcelpetrick.it)
-; date: 20161019
-; version: 0.8
+; date: 20161120
+; version: 0.8.1
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -35,6 +35,7 @@ HotKeySet("+x", "togglePause") ; freeze!
 HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
 ; some editable constants: change them based on your experience; most values are chosen for longterm-unwatched-runs (90% performance, but no errors ..)
+Global Const $wantedCrusaderPos = 5 ; 4 is Sarah, 5 is Wendy ..
 Global Const $moveSpeed = 2 ; 0 instant; 10 default, 2 is for real runs
 Global Const $logFunctionCall = True ;False True; determines if the entry of a function is logged to StdErr
 ; position-settings
@@ -47,7 +48,7 @@ Global Const $diffRight = [41, 52] ; offset from the "start-coin" to the "shuffl
 ; time-settings
 Global Const $sleepingTime = 200;
 Global Const $timeTriggerDelay = 7 ; 10 would be "always safe"; 5 fits for fast connections; 7 is safe and sound
-Global Const $savageCooldown = 15 * 60; + $timeTriggerDelay ; +10 for security; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
+Global Const $savageCooldown = 15 * 60; + $timeTriggerDelay ; +10 for safety; with current set-up: maybe use this instead of Magnify (11m15s), because else more valueable Savage-activation would "slip"
 Global const $referenceTime = "2016/01/01 00:00:00" ; randomly chosen (anything past the current date works)
 
 ; helper-variables
@@ -101,13 +102,13 @@ Func switchToSarah(ByRef Const $mousePosOri)
 
    ; 9 to the left; multiple click via setting of MouseClick did not work - delay is needed
    MouseMove($mousePosOri[0] + $diffLeft[0], $mousePosOri[1] + $diffLeft[1], $moveSpeed)
-   For $i = 0 To (9-1) Step 1
+   For $i = 0 To (10-1) Step 1
 	  MouseClick("left")
 	  Sleep(1000 / 10) ; 10 per second
    Next
    ; 4 to the right
    MouseMove($mousePosOri[0] + $diffRight[0], $mousePosOri[1] + $diffRight[1], $moveSpeed)
-   For $i = 0 To (4-1) Step 1
+   For $i = 0 To ($wantedCrusaderPos-1) Step 1
 	  MouseClick("left")
 	  Sleep(1000 / 10) ; 10 per second
    Next
