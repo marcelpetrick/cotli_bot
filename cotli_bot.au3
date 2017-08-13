@@ -8,10 +8,11 @@
 ;				* pausing the script inbetween for adjustments now possible
 ;				* will switch automatically to your favorite (third!) formation
 ;				* will make Sarah the main DPS - even if you started the script with some other crusader below the cursor (just has to be top-right!)
+;				* will harvest via SHIFT+c the currently finished mission-rewards
 ;				* works with ArmorGames Version 1.19 in Chrome
 ; author: Marcel Petrick (mail@marcelpetrick.it)
 ; date: 20170813
-; version: 0.8.2
+; version: 0.9
 ; license:  GNU GENERAL PUBLIC LICENSE Version 2
 
 ; ********************************
@@ -24,6 +25,8 @@
 ; 3. press Shift+y for starting the bot .. enjoy
 ; 4. pause/unpause the script-run with Shift+x
 ; 5. quit script with F5 (just like starting)
+;
+; press after start whenever you want "SHIFT+c" to trigger the mission-reward-harvesting :)
 ; ********************************
 
 ;includes
@@ -32,6 +35,7 @@
 ; assign the hotkeys
 HotKeySet("+y", "main") ; go go go
 HotKeySet("+x", "togglePause") ; freeze!
+HotKeySet("+c", "harvestMissions") ; just for testing the harvest missions functionality
 HotKeySet("{F5}", "quitScript") ; stop, come back home!
 
 ; some editable constants: change them based on your experience; most values are chosen for longterm-unwatched-runs (90% performance, but no errors ..)
@@ -81,6 +85,39 @@ Func logCall(ByRef Const $string)
 	  ConsoleWrite($string & " " & _NowTime(5) & @CRLF)
 	  ;ConsoleWrite($string & " " & _NowTime(5) & "; ")
    EndIf
+EndFunc
+
+; brief: harvest all the finished missions items (next plan: add new missions!)
+Func harvestMissions(ByRef Const $mousePosOri)
+   logCall("harvestMissions(): entered")
+
+   MouseMove($mousePosOri[0] - 85, $mousePosOri[1] - 55, $moveSpeed) ; go to the !-tab
+   MouseClick("left") ; open it
+   Sleep(500)
+
+   MouseMove($mousePosOri[0] - 800, $mousePosOri[1] + 40, $moveSpeed); go to "missions"
+   MouseClick("left") ; open it
+   Sleep(500)
+
+   ; now click on collect an next and so on .... since that are overlapping items, just continue with that
+   For $i = 0 To (10 - 1) Step 1
+	  MouseMove($mousePosOri[0] - 400, $mousePosOri[1] - 160, $moveSpeed); go to "the overlapping field
+	  MouseClick("left")
+	  Sleep(200)
+   Next
+
+   ; close the menu
+   ; ivy leaf -50,+30 from goldcoin
+   MouseMove($mousePosOri[0] - 0, $mousePosOri[1] - 490, $moveSpeed); x-position
+   MouseClick("left")
+   Sleep(500)
+
+   ; go to the crusaders tab
+   MouseMove($mousePosOri[0] - 200, $mousePosOri[1] - 55, $moveSpeed)
+   MouseClick("left") ; open it
+   Sleep(500)
+
+   logCall("harvestMissions(): finished")
 EndFunc
 
 ; brief: move the mouse in some counter-clock-wise hook-shape
@@ -161,7 +198,7 @@ EndFunc
 ; brief: infinite loop of "level up main-DPS-char & ten clicks for the monsters"
 Func main()
    logCall("main()")
-   Local Const $mousePosOri = MouseGetPos() ; save initial position to fix even accidental movements
+   Global Const $mousePosOri = MouseGetPos() ; save initial position to fix even accidental movements
    Local $counter = 0 ; increased and reset every UF
 
    While (True)
@@ -176,6 +213,9 @@ Func main()
 		 MouseClick("left")
 		 Sleep(1000 / 10) ; 10 (per second) as "killing-helper"; increase if system is fast enough (10 max)
 	  Next
+
+; just for testing positioned here - will be moved ...
+;harvestMissions($mousePosOri)
 
 	  ; move mouse to collect items
 	  collectItems($mousePosOri)
